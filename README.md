@@ -339,22 +339,18 @@ streamer_count = aggregate(streamer ~ date + games, data = dt_total_view_time, F
 streamer_count = as.data.table(streamer_count)
 
 ```
+Finally, because some streamers are "big" in that they attract many viewers, whereas other streamers are small. Compute a follower-weighted measure of the number of streamers by summing up all streamers who broadcast the game by
+their followers (sum followers for those who broadcast game.
 
-#   Finally, because some streamers are "big" in that they attract many viewers, whereas other 
-#   streamers are small. Compute a follower-weighted 
-#   measure of the number of streamers by summing up all streamers who broadcast the game by
-#   their followers (sum followers for those who broadcast game j)
-
-
-# Compute the follower-weighted measure for each game
+**Compute the follower-weighted measure for each game**
+```
 follower_weighted = aggregate(followers ~ stream_title + streamer,
                               data = dt_total_view_time,
                               FUN = sum)
 
-
-
-# Prepare summary stats table 
-
+```
+**Prepare summary stats table **
+```
 result <- dt_total_view_time %>%
     group_by(games) %>%
     mutate(total_followers_for_game = sum(followers),
@@ -362,25 +358,24 @@ result <- dt_total_view_time %>%
     ungroup()
 print(result)
 
+```
 
-#############################
 # Step 4: Is there an association between Twitch streaming and video game playing?
-#############################
 
-# Now we're ready to examine whether Twitch broadcasts are associated with the number of players in games
-#   To begin with, merge the Twitch data on the daily total viewing hours and the number of streamers. 
-#   Drop games that do not exist in both data, but keep all dates for games that exist in both data even if 
-#   that date does not have streams. Finally, keep observations after 2017-01-01. 
+Now we're ready to examine whether Twitch broadcasts are associated with the number of players in games. To begin with, merge the Twitch data on the daily total viewing hours and the number of streamers. Drop games that do not exist in both data, but keep all dates for games that exist in both data even if that date does not have streams. Finally, keep observations after 2017-01-01. 
 
-#prepare our final data table
+**Prepare our final data table**
+```
 dt_final_data = NULL
 
-#cooverting to data table
+```
+
+**Conoverting to data table**
+```
 dt_final_data = as.data.table(dt_final_data)
 #filter streamer count data starting at 2017-01-01
 streamer_count = subset(streamer_count, date >= as.Date("2017-01-01"))
 streamer_count = as.data.table(streamer_count)
-
 dt_final_data <- streamer_count %>%
     left_join(select(dt_ga, app_id, title), by = c("games" = "title"))
 dt_final_data = as.data.table(dt_final_data)
@@ -390,56 +385,45 @@ dt_final_data = subset(dt_final_data, !is.na(dt_final_data$app_id))
 
 dt_final_data <- merge(dt_final_data, dt_sum[, c("app_id", "date","player_count")], 
                           by = c("app_id","date"))
-
-#get total viewer tines
+```
+**Get total viewer times**
+```
 dt_total_view_time = as.data.table(dt_total_view_time)
 
 dt_viewer_time_aggr = aggregate(viewing_time ~ games + date, data= dt_total_view_time,
                                 FUN = sum)
 
-
 dt_final_data <- merge(dt_final_data, dt_viewer_time_aggr[, c("games", "date","viewing_time")], 
                           by = c("games","date"))
 
+```
+For days when there is no stream, replace viewing hour, number of streamers, and sum of streamers' followers to zero. Drop observations without data on the number of players. Now examine the correlation between the number of streamers who broadcast the game and the number of players. First, for each of the top-9 paid games we obtain from step 2, plot the number of players and the number of streamers. 
 
-#   For days when there is no stream, replace viewing hour, number of streamers,
-#and sum of streamers' followers to zero.Drop observations without data on the number of players
-#   Now examine the correlation between the number of streamers who broadcast the game and the number of players 
-#   First, for each of the top-9 paid games we obtain from step 2,
-#plot the number of players and the number of streamers. 
-
-
-# Subset the merged_data_2017 for these top 9 games
-
+**Subset the merged_data_2017 for these top 9 games**
+```
 subset_data <- dt_final_data %>% 
     filter(app_id %in% top_9_games$app_id)
 
-
-# Extract player count and viewers data
-
+```
+**Extract player count and viewers data**
+```
 number_players <- subset_data$player_count
 number_streamer <- subset_data$streamer
 
-# Calculate correlation coefficient for log player count and price
-
+```
+**Calculate correlation coefficient for log player count and price**
+```
 cor_coefficient <- cor(log(number_players), number_streamer, use = "complete.obs")
 
 plot(x = number_players,y= number_streamer, xlab="Num. of Players", ylab="Number of Streamers" ,
      main = paste("Corelation coefficient: ",cor_coefficient))
-
-
-
-#   Separately, plot the number of players against the log viewing hours + 1 (so if viewing_hours = 0
-#log(viewing_hours + 1) is not NaN). 
-#   In both cases, title the graph with the correlation coefficient between the two covariates. 
-#   Alternatively, you can plot viewing hours, players, and number of streamers against time,
-#just like what we did in step 2.GRAPH
-#   Calculate correlation coefficient for log player count and price
-#   Compute the correlation coefficient
-
+```
+Separately, plot the number of players against the log viewing hours + 1 (so if viewing_hours = 0
+log(viewing_hours + 1) is not NaN). In both cases, title the graph with the correlation coefficient between the two covariates. Alternatively, you can plot viewing hours, players, and number of streamers against time, just like what we did in step 2.GRAPH. Calculate correlation coefficient for log player count and price and compute the correlation coefficient. 
+```
 cor_coefficient <- cor(number_players, log(subset_data$viewing_time + 1))
-
-
 plot(number_players,log(subset_data$viewing_time+1), 
 xlab="Number of Players", ylab="Viewing Time", main = paste("Corelation coefficient: ", cor_coefficient),
 )
+```
+# END
